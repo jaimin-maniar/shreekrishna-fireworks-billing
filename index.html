@@ -94,6 +94,39 @@ const when=t=>new Date(t).toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"
 const blank={items:[],mult:1,bills:[],cart:{},disc:{type:"pct",val:""},next:1,shop:""};
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&Array.isArray(d.items))return{...blank,...d}}catch(e){}return blank}
 function save(d){try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+const PUBLIC_CFG={url:"",key:"",shop:""}; // optional: Supabase URL and anon key for shorter bill links, and your shop name for the customer bill page
+const uuid=()=>crypto.randomUUID?crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=crypto.getRandomValues(new Uint8Array(1))[0]%16;return(c==="x"?r:(r&3|8)).toString(16)});
+const SB="fwb-sb",SBQ="fwb-sb-q";
+const sbCfg=()=>{try{return JSON.parse(localStorage.getItem(SB))||{}}catch(e){return{}}};
+const sbQueue=()=>{try{return JSON.parse(localStorage.getItem(SBQ))||[]}catch(e){return[]}};
+const sbSaveQ=q=>{try{localStorage.setItem(SBQ,JSON.stringify(q))}catch(e){}};
+const sbBase=c=>c.url.replace(/\/+$/,"");
+const sbReady=c=>!!(c.url&&c.key&&c.email&&c.pass);
+const billLink=b=>{const c=sbCfg();if(!b||!b.id||!sbReady(c))return"";return location.origin+location.pathname+"?b="+b.id+(PUBLIC_CFG.url?"":"&u="+encodeURIComponent(c.url)+"&k="+encodeURIComponent(c.key))};
+let sbTok=null,sbExp=0;
+async function sbAuth(c){
+  if(sbTok&&Date.now()<sbExp)return sbTok;
+  const r=await fetch(sbBase(c)+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:c.key,"Content-Type":"application/json"},body:JSON.stringify({email:c.email,password:c.pass})});
+  if(!r.ok)throw new Error(r.status===400||r.status===401?"Wrong email, password or project key.":"Sign-in failed ("+r.status+").");
+  const j=await r.json();
+  sbTok=j.access_token;sbExp=Date.now()+(j.expires_in||3600)*1000-60000;
+  return sbTok;
+}
+async function sbSend(c,b,shop){
+  if(!b.id)b.id=uuid();
+  const tok=await sbAuth(c);
+  const r=await fetch(sbBase(c)+"/rest/v1/bills?on_conflict=id",{method:"POST",headers:{apikey:c.key,Authorization:"Bearer "+tok,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({id:b.id,n:b.n,subtotal:b.sub,discount:b.disc,total:b.total,items:b.lines.reduce((s,l)=>s+l.qty,0),lines:b.lines})});
+  if(!r.ok){if(r.status===401)sbTok=null;throw new Error(r.status===401||r.status===403?"Not allowed. Run the SQL setup again.":r.status===404?"Table named bills not found. Run the SQL setup.":"Saving bill details failed ("+r.status+").")}
+}
+async function sbFlush(shop){
+  const c=sbCfg(),q=sbQueue();let sent=0,err="";
+  if(!sbReady(c))return{sent:0,left:q.length,err:"Supabase is not set up."};
+  while(q.length){
+    try{await sbSend(c,q[0],shop);q.shift();sent++;sbSaveQ(q)}
+    catch(e){err=e instanceof TypeError?"No connection, or the project URL is wrong.":e.message;break}
+  }
+  return{sent,left:q.length,err};
+}
 function mergeStatic(list,items){
   const idx=new Map(items.map(i=>[(i.name||"").trim().toLowerCase(),i]));
   const add=[],upd=[];let skip=0;
@@ -134,15 +167,16 @@ function storePdf(b,shop){
 }
 const hasPdf=n=>{try{return localStorage.getItem("fwb-pdf-"+n)!==null}catch(e){return false}};
 function waNum(s){let d=String(s).replace(/\D/g,"");if(d.length===11&&d[0]==="0")d=d.slice(1);if(d.length===10)d="91"+d;return d.length>=11&&d.length<=15?d:""}
-function billText(b,shop){
+function billText(b,shop,link){
   const L=["*"+(shop||"Fireworks Bill")+"*","Bill #"+b.n+" - "+pdate(b.t),""];
   b.lines.forEach(l=>L.push(l.name+" x "+l.qty+" = "+money(l.price*l.qty)));
   L.push("","Subtotal: "+money(b.sub));
   if(b.disc>0)L.push("Discount: - "+money(b.disc));
   L.push("*Total: "+money(b.total)+"*","","Thank you!");
+  if(link)L.push("","View or download your bill:",link);
   return L.join("\n");
 }
-const waLink=(b,shop,ph)=>"https://wa.me/"+waNum(ph)+"?text="+encodeURIComponent(billText(b,shop));
+const waLink=(b,shop,ph,link)=>"https://wa.me/"+waNum(ph)+"?text="+encodeURIComponent(billText(b,shop,link));
 async function sharePdf(b,shop){
   try{
     const blob=makePdf(b,shop).output("blob");
@@ -244,6 +278,7 @@ function App(){
   const [tab,setTab]=useState("bill");
   const [done,setDone]=useState(null);
   useEffect(()=>{save(db)},[db]);
+  useEffect(()=>{if(sbReady(sbCfg())&&sbQueue().length)sbFlush(db.shop)},[]);
   useEffect(()=>{
     if(db.items.length)return;
     fetch("db.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{
@@ -268,13 +303,14 @@ function Bill({db,set,done,setDone}){
   const [ph,setPh]=useState("");
   const [wmsg,setWmsg]=useState("");
   const [cmsg,setCmsg]=useState(null);
+  const [cloud,setCloud]=useState(null);
   const sendPdf=async()=>{
     const r=await sharePdf(done,db.shop);
     setWmsg(r==="ok"||r==="cancel"?"":"Sharing a file is not available in this browser. Use Send text bill, or save the PDF and attach it in WhatsApp.");
   };
   const savePdf=()=>setPmsg(storePdf(done,db.shop)?"PDF saved on this device.":"Could not save the PDF. Storage may be full.");
   const copyImg=async()=>{const r=await copyBillImage(done,db.shop);setCmsg(r==="ok"?{ok:1,t:"Bill image copied. Open the chat and paste."}:{t:"This browser cannot copy images. Use Copy bill text."})};
-  const copyTxt=async()=>{const ok=await copyText(billText(done,db.shop));setCmsg(ok?{ok:1,t:"Bill text copied. Open the chat and paste."}:{t:"Could not copy. Use Send text bill on WhatsApp."})};
+  const copyTxt=async()=>{const ok=await copyText(billText(done,db.shop,billLink(done)));setCmsg(ok?{ok:1,t:"Bill text copied. Open the chat and paste."}:{t:"Could not copy. Use Send text bill on WhatsApp."})};
   const copyPd=async()=>{const r=await copyPdf(done,db.shop);setCmsg(r==="ok"?{ok:1,t:"PDF copied. Try pasting in the chat. If nothing pastes, use Copy bill image."}:{t:"Your browser does not allow copying a PDF. Use Copy bill image instead."})};
   const cartRef=useRef(null);
   const eff=p=>r2(num(p)*num(db.mult));
@@ -297,11 +333,12 @@ function Bill({db,set,done,setDone}){
   const clear=()=>{if(!arm){setArm(true);setTimeout(()=>setArm(false),3000);return}setArm(false);set({cart:{},disc:{type:"pct",val:""}})};
   const saveBill=()=>{
     if(!lines.length)return;
-    const bill={n:db.next,t:Date.now(),lines:lines.map(l=>({name:l.it.name,price:l.price,qty:l.qty})),sub,disc,total};
+    const bill={id:uuid(),n:db.next,t:Date.now(),lines:lines.map(l=>({name:l.it.name,price:l.price,qty:l.qty})),sub,disc,total};
     set(d=>({items:d.items.map(i=>d.cart[i.id]>0?{...i,stock:Math.max(0,num(i.stock)-d.cart[i.id])}:i),bills:[bill,...d.bills].slice(0,500),next:d.next+1,cart:{},disc:{type:"pct",val:""}}));
     if(db.autoPdf)storePdf(bill,db.shop);
     if(db.bills.length>=500){try{localStorage.removeItem("fwb-pdf-"+db.bills[499].n)}catch(e){}}
-    setPmsg(db.autoPdf?"PDF saved on this device.":"");setPh("");setWmsg("");setCmsg(null);
+    setPmsg(db.autoPdf?"PDF saved on this device.":"");setPh("");setWmsg("");setCmsg(null);setCloud(null);
+    if(sbReady(sbCfg())){sbSaveQ([...sbQueue(),bill]);sbFlush(db.shop).then(setCloud)}
     setDone(bill);
   };
   const shown=db.items.filter(i=>(i.name||"").toLowerCase().includes(q.trim().toLowerCase())).sort((a,b)=>(a.name||"").localeCompare(b.name||""));
@@ -330,12 +367,13 @@ function Bill({db,set,done,setDone}){
     done.disc>0?h("div",{className:"row"},h("span",null,"Discount"),h("span",null,"− "+money(done.disc))):null,
     h("div",{className:"row total"},h("span",null,"Total"),h("span",null,money(done.total))),
     pmsg?h("div",{className:"ok noprint",role:"status"},pmsg):null,
+    cloud?h("div",{className:(cloud.left?"toast":"ok")+" noprint",role:"status"},cloud.left?"Cloud backup pending ("+cloud.left+"). "+(cloud.err||""):"Saved to cloud."):null,
     h("div",{className:"noprint",style:{marginTop:10,textAlign:"left"}},
       h("label",{className:"lbl"},"Customer WhatsApp number (optional)"),
       h("input",{className:"inp",type:"tel",inputMode:"tel",placeholder:"10-digit number",value:ph,onChange:e=>setPh(e.target.value)}),
       h("div",{className:"acts",style:{gridTemplateColumns:"1fr",marginTop:8}},
         h("button",{className:"pri",onClick:sendPdf},"Send PDF on WhatsApp"),
-        h("a",{className:"btn",href:waLink(done,db.shop,ph),target:"_blank",rel:"noopener noreferrer"},"Send text bill on WhatsApp")),
+        h("a",{className:"btn",href:waLink(done,db.shop,ph,billLink(done)),target:"_blank",rel:"noopener noreferrer"},"Send text bill on WhatsApp")),
       wmsg?h("div",{className:"toast",role:"alert"},wmsg):null,
       h("div",{className:"acts",style:{gridTemplateColumns:"1fr 1fr"}},h("button",{onClick:copyImg},"Copy bill image"),h("button",{onClick:copyTxt},"Copy bill text"),h("button",{style:{gridColumn:"1/-1"},onClick:copyPd},"Copy PDF (experimental)")),
       cmsg?h("div",{className:cmsg.ok?"ok":"toast",role:"status"},cmsg.t):null),
@@ -381,6 +419,27 @@ function Admin({db,set}){
   const [imp,setImp]=useState(null);
   const [pdfMsg,setPdfMsg]=useState(null);
   const [,tick]=useState(0);
+  const [sb,setSb]=useState(sbCfg);
+  const [sbMsg,setSbMsg]=useState(null);
+  const setSbk=(k,v)=>setSb(x=>{const n={...x,[k]:v.trim()};try{localStorage.setItem(SB,JSON.stringify(n))}catch(e){}return n});
+  const sbTest=async()=>{
+    setSbMsg({t:"Testing…"});sbTok=null;
+    try{await sbAuth(sb);setSbMsg({ok:1,t:"Connected and signed in."})}
+    catch(e){setSbMsg({t:e instanceof TypeError?"Could not reach Supabase. Check the project URL.":e.message})}
+  };
+  const sbUp=async()=>{
+    setSbMsg({t:"Uploading…"});
+    const r=await sbFlush(db.shop);
+    setSbMsg(r.left?{t:"Still waiting: "+r.left+". "+(r.err||"")}:{ok:1,t:r.sent?"Uploaded "+r.sent+" bill(s).":"Nothing waiting."});
+    tick(x=>x+1);
+  };
+  const sbAll=()=>{
+    const all=db.bills.map(b=>b.id?b:{...b,id:uuid()});
+    if(all.some((b,i)=>b!==db.bills[i]))set({bills:all});
+    const q=sbQueue(),have=new Set(q.map(b=>b.id));
+    sbSaveQ([...q,...all.filter(b=>!have.has(b.id)).reverse()]);
+    sbUp();
+  };
   const openPdf=b=>{
     let uri=null;try{uri=localStorage.getItem("fwb-pdf-"+b.n)}catch(e){}
     if(!uri)uri=storePdf(b,db.shop);
@@ -447,8 +506,24 @@ function Admin({db,set}){
   const today=new Date().toDateString();
   const todays=db.bills.filter(b=>new Date(b.t).toDateString()===today);
   const todayTotal=todays.reduce((s,b)=>s+b.total,0);
+  const sbOn=sbReady(sb);
+  const sbf=(label,k,ph,type)=>field(label,h("input",{className:"inp",type:type||"text",autoComplete:"off",autoCapitalize:"none",spellCheck:false,placeholder:ph,value:sb[k]||"",onChange:e=>setSbk(k,e.target.value)}),true);
+  const sbCard=h("section",{className:"card",style:{order:9}},
+    h("h2",null,"Cloud backup (Supabase)"),
+    h("div",{className:"muted",style:{marginBottom:8}},"Each saved bill's details go to your Supabase bills table with a unique link. Customers open the link to view and download the PDF, which is made on their own phone, so no PDF files are stored. If you are offline, bills wait and upload later. Use a login made only for this shop."),
+    h("div",{className:"f"},
+      sbf("Project URL","url","https://xxxx.supabase.co"),
+      sbf("Anon (public) key","key","Paste anon key"),
+      sbf("Shop login email","email","shop@example.com","email"),
+      sbf("Shop login password","pass","Password","password")),
+    sbMsg?h("div",{className:sbMsg.ok?"ok":"toast",role:"status",style:{paddingTop:8}},sbMsg.t):null,
+    h("div",{className:"muted",style:{paddingTop:8}},"Waiting to upload: "+sbQueue().length),
+    h("div",{className:"acts",style:{gridTemplateColumns:"1fr 1fr"}},
+      h("button",{disabled:!sbOn,onClick:sbTest},"Test connection"),
+      h("button",{className:"pri",disabled:!sbOn,onClick:sbUp},"Upload waiting"),
+      h("button",{style:{gridColumn:"1/-1"},disabled:!sbOn,onClick:sbAll},"Also upload all past bills")));
 
-  return h("div",{className:"cols"},
+  return h("div",{className:"cols"},sbCard,
     h("section",{className:"card"},
       h("h2",null,"Price multiplier"),
       h("div",{className:"muted",style:{marginBottom:8}},"Every item price in the bill is multiplied by this number. Use 1 for no change."),
@@ -497,7 +572,38 @@ function Admin({db,set}){
           b.disc>0?h("div",{className:"row"},h("span",null,"Discount"),h("span",null,"− "+money(b.disc))):null,h("button",{style:{marginTop:8,width:"100%"},onClick:()=>openPdf(b)},hasPdf(b.n)?"Open saved PDF":"Create and open PDF"),h("button",{style:{marginTop:8,width:"100%"},onClick:async()=>{const r=await sharePdf(b,db.shop);if(r!=="ok"&&r!=="cancel")setPdfMsg({n:b.n,t:"Sharing a file is not available in this browser."})}},"Send PDF on WhatsApp"),pdfMsg&&pdfMsg.n===b.n?h("div",{className:"toast",role:"status"},pdfMsg.t):null):null))));
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+function Viewer(){
+  const qs=new URLSearchParams(location.search),id=qs.get("b");
+  const c={url:qs.get("u")||PUBLIC_CFG.url||sbCfg().url||"",key:qs.get("k")||PUBLIC_CFG.key||sbCfg().key||""};
+  const [st,setSt]=useState({s:"load"});
+  useEffect(()=>{
+    if(!c.url||!c.key){setSt({s:"err",m:"This link is missing its project details."});return}
+    fetch(sbBase(c)+"/rest/v1/rpc/get_bill",{method:"POST",headers:{apikey:c.key,"Content-Type":"application/json"},body:JSON.stringify({p_id:id})})
+      .then(r=>r.ok?r.json():Promise.reject(r.status))
+      .then(b=>setSt(b&&b.lines?{s:"ok",b}:{s:"none"}))
+      .catch(e=>setSt(e===400?{s:"none"}:{s:"err",m:typeof e==="number"?"Could not load the bill ("+e+").":"No connection. Try again."}));
+  },[]);
+  const b=st.b;
+  const download=()=>{try{makePdf(b,b.shop||PUBLIC_CFG.shop).save("bill-"+b.n+".pdf")}catch(e){}};
+  return h("div",{className:"wrap"},h("section",{className:"card rc"},
+    st.s==="load"?h("div",{className:"empty"},"Loading your bill…"):
+    st.s==="none"?h("div",{className:"empty"},"This bill was not found. Check the link."):
+    st.s==="err"?h("div",{className:"toast",role:"alert"},st.m):
+    h("div",null,
+      h("h2",null,b.shop||PUBLIC_CFG.shop||"Bill"),
+      h("div",{className:"muted"},"Bill #"+b.n+" · "+when(b.t)),
+      h("hr"),
+      b.lines.map((l,i)=>h("div",{className:"row",key:i},h("span",null,l.name+" × "+l.qty),h("span",null,money(l.price*l.qty)))),
+      h("hr"),
+      h("div",{className:"row"},h("span",null,"Subtotal"),h("span",null,money(b.sub))),
+      b.disc>0?h("div",{className:"row"},h("span",null,"Discount"),h("span",null,"− "+money(b.disc))):null,
+      h("div",{className:"row total"},h("span",null,"Total"),h("span",null,money(b.total))),
+      h("div",{className:"acts noprint",style:{gridTemplateColumns:"1fr 1fr"}},
+        h("button",{className:"pri",onClick:download},"Download PDF"),
+        h("button",{onClick:()=>{try{window.print()}catch(e){}}},"Print")))));
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(new URLSearchParams(location.search).get("b")?Viewer:App));
 </script>
 </body>
 </html>
