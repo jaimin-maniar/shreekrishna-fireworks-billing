@@ -5,76 +5,122 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fireworks Billing</title>
 <style>
-:root{--bg:#f2f4f7;--card:#fff;--text:#14181f;--muted:#5b6573;--line:#d5dae2;--pri:#b3123f;--prit:#fff;--soft:#fbe6ec;--ok:#0b7a43;--bad:#b42318;--hd:#fff;
+:root{--bg:#f4f3f1;--card:#fff;--text:#191817;--muted:#62605d;--line:#e5e3e0;--pri:#20201f;--prit:#fff;--soft:#eeece9;--ok:#176b43;--bad:#a3233c;--hd:#f4f3f1;--focus:#9f233b;--radius:10px;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151a;--card:#1c2027;--text:#f1f3f6;--muted:#a3adba;--line:#323945;--pri:#ff5c80;--prit:#14181f;--soft:#3a1d27;--ok:#4ad08a;--bad:#ff8a80;--hd:#1c2027}}
-:root[data-theme="dark"]{--bg:#12151a;--card:#1c2027;--text:#f1f3f6;--muted:#a3adba;--line:#323945;--pri:#ff5c80;--prit:#14181f;--soft:#3a1d27;--ok:#4ad08a;--bad:#ff8a80;--hd:#1c2027}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171716;--card:#20201f;--text:#f2f2f2;--muted:#b4b4b4;--line:#393835;--pri:#f2f2f2;--prit:#191817;--soft:#2d2c29;--ok:#71c99a;--bad:#f08a9e;--hd:#171716;--focus:#f08a9e}}
+:root[data-theme="dark"]{--bg:#171716;--card:#20201f;--text:#f2f2f2;--muted:#b4b4b4;--line:#393835;--pri:#f2f2f2;--prit:#191817;--soft:#2d2c29;--ok:#71c99a;--bad:#f08a9e;--hd:#171716;--focus:#f08a9e}
 html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 70px)}
 *,*::before,*::after{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:17px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--hd);z-index:10}
 button,input{font:inherit;color:inherit}
-button{cursor:pointer;border:2px solid var(--line);background:var(--card);border-radius:12px;min-height:48px;padding:0 16px;font-weight:600}
-button:disabled{opacity:.45;cursor:not-allowed}
-button:focus-visible,input:focus-visible{outline:3px solid var(--pri);outline-offset:2px}
-.hd{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--hd);border-bottom:1px solid var(--line);padding:8px 12px;display:flex;gap:8px;align-items:center}
-.hd h1{font-size:18px;margin:0 auto 0 0;white-space:nowrap}
-.tab{min-width:92px}
-.tab[aria-pressed=true]{background:var(--pri);border-color:var(--pri);color:var(--prit)}
-.wrap{max-width:1100px;margin:0 auto;padding:12px 12px 96px}
-.cols{display:grid;gap:12px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
-.card h2{font-size:18px;margin:0 0 10px}
-.inp{width:100%;min-height:48px;border:2px solid var(--line);border-radius:12px;padding:0 12px;background:var(--bg)}
-.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px;margin-top:10px}
-.item{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;min-height:88px;padding:10px 12px;font-weight:500}
-.item:active:not(:disabled){background:var(--soft);border-color:var(--pri)}
-.iname{font-weight:700;overflow-wrap:anywhere}
-.iprice{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
-.istock{font-size:14px;color:var(--muted)}
-.istock.low{color:var(--bad);font-weight:700}
-.badge{position:absolute;top:8px;right:8px;background:var(--pri);color:var(--prit);border-radius:99px;min-width:28px;height:28px;display:grid;place-items:center;font-weight:800;font-size:15px;padding:0 6px}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:7px;min-height:38px;padding:0 13px;font-weight:550;transition:background-color .15s,border-color .15s,color .15s,transform .15s}
+button:hover:not(:disabled){background:var(--soft);border-color:var(--muted)}
+button:active:not(:disabled){transform:translateY(1px)}
+button:disabled{opacity:.48;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.app-shell{min-height:100vh;display:grid;grid-template-columns:232px minmax(0,1fr)}
+.sidebar{height:100vh;height:100dvh;position:sticky;top:0;display:flex;flex-direction:column;padding:28px 16px 18px;background:var(--bg);border-right:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:11px;padding:0 8px 32px}
+.brand-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:var(--pri);color:var(--prit);font-size:13px;font-weight:750;letter-spacing:-.04em}
+.brand strong,.brand span{display:block}
+.brand strong{font-size:15px;line-height:1.2}
+.brand span{font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:.04em}
+.nav-label{padding:0 11px 8px;color:var(--muted);font-size:12px}
+.primary-nav{display:grid;gap:3px}
+.tab{width:100%;min-width:0;text-align:left;border:0;background:transparent;border-radius:7px;padding:0 11px;min-height:38px;font-size:14px;font-weight:450;color:var(--muted)}
+.tab[aria-pressed=true]{background:var(--soft);color:var(--text);font-weight:600}
+.side-foot{margin-top:auto;padding:14px 10px 0;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+.side-foot strong{display:block;color:var(--text);font-weight:550;margin-bottom:2px}
+.workspace{min-width:0}
+.topbar{min-height:58px;display:flex;align-items:center;justify-content:flex-end;padding:0 clamp(20px,3vw,44px);border-bottom:1px solid var(--line);color:var(--muted);font-size:13px}
+.wrap{max-width:1500px;margin:0 auto;padding:30px clamp(20px,3vw,44px) 100px}
+.page-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin:0 0 22px}
+.page-heading h1{font-size:25px;line-height:1.2;letter-spacing:-.035em;margin:0;font-weight:650}
+.page-heading p{font-size:14px;color:var(--muted);margin:5px 0 0}
+.shop-name{font-size:13px;color:var(--muted);text-align:right}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:20px}
+.stat{padding:14px 18px;min-width:0}
+.stat+.stat{border-left:1px solid var(--line)}
+.stat span,.stat strong{display:block}
+.stat span{font-size:12px;color:var(--muted);margin-bottom:5px}
+.stat strong{font-size:19px;line-height:1.2;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.cols{display:grid;gap:16px}
+.card{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.card h2{font-size:16px;margin:0 0 14px;font-weight:600;line-height:1.35}
+.cols.two>.card.noprint{background:transparent;border:0;padding:0}
+.inp{width:100%;min-height:40px;border:1px solid var(--line);border-radius:7px;padding:0 12px;background:var(--bg)}
+.inp::placeholder{color:var(--muted)}
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:14px}
+.item{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;min-height:96px;padding:14px;background:var(--card);font-weight:450}
+.item:hover:not(:disabled){border-color:var(--text);background:var(--soft)}
+.item:active:not(:disabled){background:var(--soft);border-color:var(--focus)}
+.iname{font-weight:550;overflow-wrap:anywhere;padding-right:24px}
+.iprice{font-size:18px;font-weight:650;font-variant-numeric:tabular-nums}
+.istock{font-size:12px;color:var(--muted)}
+.istock.low{color:var(--bad);font-weight:600}
+.badge{position:absolute;top:10px;right:10px;min-width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:var(--soft);color:var(--text);font-weight:600;font-size:12px;padding:0 5px}
 .muted{color:var(--muted)}
-.empty{padding:20px 8px;text-align:center;color:var(--muted)}
-.line{display:grid;grid-template-columns:1fr auto;gap:6px 10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.empty{padding:24px 12px;text-align:center;color:var(--muted)}
+.line{display:grid;grid-template-columns:1fr auto;gap:7px 12px;padding:13px 0;border-bottom:1px solid var(--line)}
 .line:last-of-type{border-bottom:0}
-.ln{font-weight:700;overflow-wrap:anywhere}
-.lt{font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.ln{font-weight:550;overflow-wrap:anywhere}
+.lt{font-weight:550;text-align:right;font-variant-numeric:tabular-nums}
 .qty{display:flex;gap:6px;align-items:center}
-.sq{width:48px;padding:0;font-size:24px}
-.qn{width:72px;text-align:center;font-weight:800}
-.x{width:48px;padding:0;color:var(--bad);margin-left:auto}
-.disc{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 0;border-top:2px solid var(--line)}
+.sq{width:38px;padding:0;font-size:20px}
+.qn{width:56px;text-align:center;font-weight:550}
+.x{width:38px;padding:0;color:var(--bad);margin-left:auto}
+.disc{display:flex;flex-wrap:wrap;gap:7px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
 .seg{display:flex}
-.seg button{border-radius:0;min-width:52px;padding:0 10px}
-.seg button:first-child{border-radius:12px 0 0 12px}
-.seg button:last-child{border-radius:0 12px 12px 0;margin-left:-2px}
-.seg button[aria-pressed=true],.chip[aria-pressed=true]{background:var(--pri);border-color:var(--pri);color:var(--prit)}
-.chip{min-height:40px;padding:0 12px}
-.row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-variant-numeric:tabular-nums}
-.total{font-size:30px;font-weight:800;padding:8px 0}
-.acts{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-top:8px}
-.pri{background:var(--pri);border-color:var(--pri);color:var(--prit);min-height:56px;font-size:19px}
-.bar{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--hd);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}
-.bi{max-width:1100px;margin:0 auto;display:flex;gap:10px;align-items:center}
-.bt{margin-right:auto;min-width:0;line-height:1.15}
-.bt b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
-.bi .pri{min-height:52px;font-size:18px;padding:0 20px}
-.toast{color:var(--bad);font-weight:700;padding-top:6px}
-.f{display:grid;gap:8px;grid-template-columns:1fr 1fr}
+.seg button{border-radius:0;min-width:42px;padding:0 10px}
+.seg button:first-child{border-radius:6px 0 0 6px}
+.seg button:last-child{border-radius:0 6px 6px 0;margin-left:-1px}
+.seg button[aria-pressed=true],.chip[aria-pressed=true]{background:var(--soft);border-color:var(--text);color:var(--text)}
+.chip{min-height:34px;padding:0 10px}
+.row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-variant-numeric:tabular-nums}
+.total{font-size:24px;font-weight:650;padding:10px 0}
+.acts{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-top:10px}
+.pri{background:var(--pri);border-color:var(--pri);color:var(--prit);min-height:44px;font-size:15px;font-weight:600}
+.pri:hover:not(:disabled){background:var(--text);border-color:var(--text);color:var(--bg)}
+.bar{position:fixed;left:232px;right:0;bottom:0;z-index:9;background:var(--card);border-top:1px solid var(--line);padding:10px clamp(20px,3vw,44px) calc(10px + env(safe-area-inset-bottom,0px))}
+.bi{max-width:1412px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.bt{margin-right:auto;min-width:0;line-height:1.2}
+.bt b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+.bi .pri{min-height:42px;font-size:14px;padding:0 20px}
+.toast{color:var(--bad);font-weight:550;padding-top:7px}
+.f{display:grid;gap:12px;grid-template-columns:1fr 1fr}
 .f .full{grid-column:1/-1}
-.lbl{font-size:14px;color:var(--muted);display:block;margin-bottom:3px}
-.erow{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 0;border-top:1px solid var(--line)}
+.lbl{font-size:13px;color:var(--muted);display:block;margin-bottom:5px}
+.erow{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 0;border-top:1px solid var(--line)}
 .erow .full{grid-column:1/-1}
-.bill{border-top:1px solid var(--line);padding:10px 0}
+.bill{border-top:1px solid var(--line);padding:8px 0}
 .bill>button{width:100%;text-align:left;border:0;background:none;display:flex;justify-content:space-between;gap:10px;min-height:44px;padding:0}
 .rc{text-align:center}
-.btn{display:grid;place-items:center;min-height:48px;border:2px solid var(--line);border-radius:12px;background:var(--card);font-weight:600;color:var(--text);text-decoration:none;padding:0 16px;text-align:center}
+.btn{display:grid;place-items:center;min-height:40px;border:1px solid var(--line);border-radius:7px;background:var(--card);font-weight:550;color:var(--text);text-decoration:none;padding:0 16px;text-align:center}
 .rc .row{text-align:left}
-.rc hr{border:0;border-top:2px dashed var(--line);margin:10px 0}
-.ok{color:var(--ok);font-weight:800}
-@media (min-width:820px){.cols.two{grid-template-columns:1.25fr 1fr;align-items:start}.cart{position:sticky;top:calc(env(safe-area-inset-top,0px) + 72px)}.vb{display:none}.erow{grid-template-columns:2fr 1fr 1fr auto;align-items:end}.erow .full{grid-column:auto}.f{grid-template-columns:2fr 1fr 1fr auto;align-items:end}.f .full{grid-column:auto}}
-@media print{body::before,.noprint{display:none!important}body{background:#fff;color:#000}.cols.two{display:block}.card{border:0}.cart{position:static}}
+.rc hr{border:0;border-top:1px dashed var(--line);margin:12px 0}
+.ok{color:var(--ok);font-weight:600}
+.admin-nav{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 18px;overflow-x:auto}
+.admin-tab{min-height:38px;border:0;border-radius:0;background:transparent;color:var(--muted);padding:0 12px;white-space:nowrap}
+.admin-tab[aria-pressed=true]{color:var(--text);border-bottom:2px solid var(--text)}
+.admin-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.admin-grid>[data-admin-section]{order:0}
+.admin-grid>[data-admin-section="inventory"]{order:1}
+.admin-grid>[data-admin-section="sales"]{order:2}
+.admin-grid>[data-admin-section="settings"]{order:3}
+.admin-grid>[data-admin-section="backup"]{order:4}
+.admin-grid[data-admin-view="inventory"]>[data-admin-section]:not([data-admin-section="inventory"]),
+.admin-grid[data-admin-view="sales"]>[data-admin-section]:not([data-admin-section="sales"]),
+.admin-grid[data-admin-view="settings"]>[data-admin-section]:not([data-admin-section="settings"]),
+.admin-grid[data-admin-view="backup"]>[data-admin-section]:not([data-admin-section="backup"]){display:none}
+.admin-grid[data-admin-view="inventory"]>[data-admin-section="inventory"],
+.admin-grid[data-admin-view="sales"]>[data-admin-section="sales"],
+.admin-grid[data-admin-view="settings"]>[data-admin-section="settings"],
+.admin-grid[data-admin-view="backup"]>[data-admin-section="backup"]{grid-column:1/-1}
+@media (min-width:900px){.cols.two{grid-template-columns:minmax(0,1.2fr) minmax(340px,.8fr);align-items:start}.cart{position:sticky;top:20px}.vb{display:none}.erow{grid-template-columns:minmax(180px,2fr) minmax(110px,1fr) minmax(100px,1fr) auto;align-items:end}.erow .full{grid-column:auto}.f{grid-template-columns:minmax(180px,2fr) minmax(110px,1fr) minmax(100px,1fr) auto;align-items:end}}
+@media (max-width:899px){.app-shell{grid-template-columns:1fr}.sidebar{height:auto;position:relative;top:auto;z-index:8;display:grid;grid-template-columns:1fr auto;align-items:center;padding:12px 18px;border-right:0;border-bottom:1px solid var(--line)}.brand{padding:0;gap:9px}.brand-mark{width:30px;height:30px}.brand strong{font-size:14px}.brand span,.nav-label,.side-foot{display:none}.primary-nav{display:flex;gap:4px}.tab{width:auto;padding:0 12px;min-height:36px}.topbar{min-height:44px;padding:0 20px}.wrap{padding-top:24px}.bar{left:0}.admin-grid{grid-template-columns:1fr}}
+@media (max-width:560px){.sidebar{grid-template-columns:1fr;padding:10px 16px;gap:9px}.primary-nav{display:grid;grid-template-columns:1fr 1fr;width:100%}.tab{text-align:center}.topbar{min-height:38px;font-size:12px}.wrap{padding:18px 16px 94px}.page-heading{margin-bottom:16px}.page-heading h1{font-size:22px}.page-heading p{font-size:13px}.shop-name{display:none}.stats{grid-template-columns:1fr 1fr;margin-bottom:14px}.stat{padding:11px 13px}.stat:nth-child(3){border-left:0;border-top:1px solid var(--line)}.stat:nth-child(4){border-top:1px solid var(--line)}.stat strong{font-size:17px}.cols{gap:12px}.card{padding:16px}.items{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.item{min-height:90px;padding:11px}.iprice{font-size:16px}.disc{gap:6px}.total{font-size:22px}.vb{min-width:0;padding:0 12px}.bi .pri{padding:0 14px}.erow{grid-template-columns:1fr 1fr}.erow>.full:first-child{grid-column:1/-1}.f{grid-template-columns:1fr 1fr}.f .full{grid-column:1/-1}}
+@media print{body::before,.noprint{display:none!important}body,.app-shell,.workspace{background:#fff;color:#000}.app-shell{display:block}.wrap{max-width:none;padding:0}.cols.two{display:block}.card{border:0}.cart{position:static}}
 </style>
 </head>
 <body>
@@ -140,7 +186,7 @@ function mergeStatic(list,items){
   return{add,upd,skip};
 }
 
-const pad=n=>String(n).padStart(2,"0");
+const pad=n=>n<10?"0"+n:String(n);
 const pdate=t=>{const d=new Date(t);return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear()+" "+pad(d.getHours())+":"+pad(d.getMinutes())};
 const rs=n=>"Rs. "+r2(n).toFixed(2);
 function makePdf(b,shop){
@@ -277,6 +323,10 @@ function App(){
   const [db,setDb]=useState(load);
   const [tab,setTab]=useState("bill");
   const [done,setDone]=useState(null);
+  const today=new Date().toDateString();
+  const todays=db.bills.filter(b=>new Date(b.t).toDateString()===today);
+  const todayTotal=todays.reduce((s,b)=>s+b.total,0);
+  const lowStock=db.items.filter(i=>num(i.stock)<=3).length;
   useEffect(()=>{save(db)},[db]);
   useEffect(()=>{if(sbReady(sbCfg())&&sbQueue().length)sbFlush(db.shop)},[]);
   useEffect(()=>{
@@ -290,12 +340,27 @@ function App(){
   },[]);
   const set=p=>setDb(d=>({...d,...(typeof p==="function"?p(d):p)}));
   const tabBtn=(k,t)=>h("button",{className:"tab","aria-pressed":tab===k,onClick:()=>setTab(k)},t);
-  return h("div",null,
-    h("div",{className:"hd noprint"},h("h1",null,db.shop||"Fireworks Billing"),tabBtn("bill","Bill"),tabBtn("admin","Admin")),
-    h("div",{className:"wrap"},tab==="bill"?h(Bill,{db,set,done,setDone}):h(Admin,{db,set})));
+  return h("div",{className:"app-shell"},
+    h("aside",{className:"sidebar noprint"},
+      h("div",{className:"brand"},h("div",{className:"brand-mark","aria-hidden":true},"SK"),h("div",null,h("strong",null,"Shree Krishna"),h("span",null,"FIREWORKS"))),
+      h("div",{className:"nav-label"},"WORKSPACE"),
+      h("nav",{className:"primary-nav","aria-label":"Main navigation"},tabBtn("bill","New bill"),tabBtn("admin","Manage shop")),
+      h("div",{className:"side-foot"},h("strong",null,"Saved on this device"),"A local copy is kept here")),
+    h("main",{className:"workspace"},
+      h("div",{className:"topbar noprint"},new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"})),
+      h("div",{className:"wrap"},
+        h("header",{className:"page-heading"},
+          h("div",null,h("h1",null,tab==="bill"?"New bill":"Shop management"),h("p",null,tab==="bill"?"Add products and prepare a customer bill.":"Manage your products, sales and shop settings.")),
+          db.shop?h("div",{className:"shop-name"},db.shop):null),
+        h("section",{className:"stats","aria-label":"Today's shop summary"},
+          h("div",{className:"stat"},h("span",null,"Today's sales"),h("strong",null,money(todayTotal))),
+          h("div",{className:"stat"},h("span",null,"Bills today"),h("strong",null,String(todays.length))),
+          h("div",{className:"stat"},h("span",null,"Products"),h("strong",null,String(db.items.length))),
+          h("div",{className:"stat"},h("span",null,"Low stock"),h("strong",null,String(lowStock)))),
+        tab==="bill"?h(Bill,{db,set,done,setDone,onManage:()=>setTab("admin")}):h(Admin,{db,set}))));
 }
 
-function Bill({db,set,done,setDone}){
+function Bill({db,set,done,setDone,onManage}){
   const [q,setQ]=useState("");
   const [msg,setMsg]=useState("");
   const [arm,setArm]=useState(false);
@@ -344,8 +409,9 @@ function Bill({db,set,done,setDone}){
   const shown=db.items.filter(i=>(i.name||"").toLowerCase().includes(q.trim().toLowerCase())).sort((a,b)=>(a.name||"").localeCompare(b.name||""));
 
   const itemsPanel=h("section",{className:"card noprint"},
+    h("h2",null,"Products"),
     h("input",{className:"inp",type:"search",placeholder:"Search item…","aria-label":"Search item",value:q,onChange:e=>setQ(e.target.value)}),
-    !db.items.length?h("div",{className:"empty"},"No items yet. Open the Admin tab to add your items."):
+    !db.items.length?h("div",{className:"empty"},h("p",null,"No products yet. Add your shop items to start a bill."),h("button",{className:"btn",onClick:onManage},"Add products")):
     !shown.length?h("div",{className:"empty"},"No item matches “"+q+"”."):
     h("div",{className:"items"},shown.map(it=>{
       const inCart=db.cart[it.id]||0,left=num(it.stock)-inCart;
@@ -391,7 +457,7 @@ function Bill({db,set,done,setDone}){
         h("button",{className:"sq","aria-label":"One less",onClick:()=>setQty(l.it,l.qty-1)},"−"),
         h("input",{className:"inp qn",type:"number",inputMode:"numeric",min:0,"aria-label":"Quantity of "+l.it.name,value:l.qty,onFocus:e=>e.target.select(),onChange:e=>e.target.value!==""&&setQty(l.it,e.target.value)}),
         h("button",{className:"sq","aria-label":"One more",onClick:()=>add(l.it)},"+"),
-        h("button",{className:"x","aria-label":"Remove "+l.it.name,onClick:()=>setQty(l.it,0)},"✕")))),
+        h("button",{className:"x","aria-label":"Remove "+l.it.name,onClick:()=>setQty(l.it,0)},"×")))),
     msg?h("div",{className:"toast",role:"alert"},msg):null,
     h("div",{className:"disc"},
       h("span",{className:"lbl",style:{margin:0}},"Discount"),
@@ -413,6 +479,7 @@ function Bill({db,set,done,setDone}){
 }
 
 function Admin({db,set}){
+  const [section,setSection]=useState("inventory");
   const [ms,setMs]=useState(String(db.mult));
   const [nn,setNn]=useState("");const [np,setNp]=useState("");const [ns,setNs]=useState("");
   const [arm,setArm]=useState(null);
@@ -508,13 +575,13 @@ function Admin({db,set}){
   const todayTotal=todays.reduce((s,b)=>s+b.total,0);
   const sbOn=sbReady(sb);
   const sbf=(label,k,ph,type)=>field(label,h("input",{className:"inp",type:type||"text",autoComplete:"off",autoCapitalize:"none",spellCheck:false,placeholder:ph,value:sb[k]||"",onChange:e=>setSbk(k,e.target.value)}),true);
-  const sbCard=h("section",{className:"card",style:{order:9}},
+  const sbCard=h("section",{className:"card","data-admin-section":"backup"},
     h("h2",null,"Cloud backup (Supabase)"),
     h("div",{className:"muted",style:{marginBottom:8}},"Each saved bill's details go to your Supabase bills table with a unique link. Customers open the link to view and download the PDF, which is made on their own phone, so no PDF files are stored. If you are offline, bills wait and upload later. Use a login made only for this shop."),
     h("div",{className:"f"},
       sbf("Project URL","url","https://xxxx.supabase.co"),
       sbf("Anon (public) key","key","Paste anon key"),
-      sbf("Shop login email","email","shop@example.com","email"),
+      sbf("Shop login email","email","shop@email.invalid","email"),
       sbf("Shop login password","pass","Password","password")),
     sbMsg?h("div",{className:sbMsg.ok?"ok":"toast",role:"status",style:{paddingTop:8}},sbMsg.t):null,
     h("div",{className:"muted",style:{paddingTop:8}},"Waiting to upload: "+sbQueue().length),
@@ -523,21 +590,25 @@ function Admin({db,set}){
       h("button",{className:"pri",disabled:!sbOn,onClick:sbUp},"Upload waiting"),
       h("button",{style:{gridColumn:"1/-1"},disabled:!sbOn,onClick:sbAll},"Also upload all past bills")));
 
-  return h("div",{className:"cols"},sbCard,
-    h("section",{className:"card"},
+  return h("div",{className:"admin-page"},
+    h("nav",{className:"admin-nav noprint","aria-label":"Shop management sections"},
+      [["inventory","Inventory"],["sales","Sales"],["settings","Settings"],["backup","Cloud backup"]].map(([key,label])=>
+        h("button",{key,className:"admin-tab","aria-pressed":section===key,onClick:()=>setSection(key)},label))),
+    h("div",{className:"cols admin-grid","data-admin-view":section},sbCard,
+    h("section",{className:"card","data-admin-section":"settings"},
       h("h2",null,"Price multiplier"),
       h("div",{className:"muted",style:{marginBottom:8}},"Every item price in the bill is multiplied by this number. Use 1 for no change."),
       h("input",{className:"inp",type:"number",inputMode:"decimal",step:"0.01",min:0,"aria-label":"Price multiplier",value:ms,onChange:e=>{setMs(e.target.value);const v=Number(e.target.value);if(e.target.value!==""&&v>=0)set({mult:v})}}),
       h("div",{style:{marginTop:12}},h("label",{className:"lbl"},"Shop name (shown on the bill)"),
         h("input",{className:"inp",value:db.shop,placeholder:"Optional",onChange:e=>set({shop:e.target.value})})),h("label",{style:{display:"flex",gap:10,alignItems:"center",minHeight:48,marginTop:8}},h("input",{type:"checkbox",style:{width:24,height:24},checked:!!db.autoPdf,onChange:e=>set({autoPdf:e.target.checked})}),"Save a PDF on this device with every bill")),
-    h("section",{className:"card"},
+    h("section",{className:"card","data-admin-section":"inventory"},
       h("h2",null,"Add item"),
       h("div",{className:"f"},
         field("Name",h("input",{className:"inp",ref:nameRef,value:nn,onChange:e=>setNn(e.target.value),onKeyDown:onKey}),true),
         field("Price (before multiplier)",h("input",{className:"inp",type:"number",inputMode:"decimal",min:0,value:np,onChange:e=>setNp(e.target.value),onKeyDown:onKey})),
         field("Stock",h("input",{className:"inp",type:"number",inputMode:"numeric",min:0,value:ns,onChange:e=>setNs(e.target.value),onKeyDown:onKey})),
         h("button",{className:"pri full",disabled:!nn.trim(),onClick:addItem},"Add item"))),
-    h("section",{className:"card"},
+    h("section",{className:"card","data-admin-section":"inventory"},
       h("h2",null,"Import items"),
       h("div",{className:"muted",style:{marginBottom:8}},"Use columns Name, Price and Stock (.xlsx, .xls or .csv). Items with the same name are updated; new names are added."),
       h("input",{className:"inp",style:{height:"auto",padding:"8px 12px"},type:"file",accept:".xlsx,.xls,.csv","aria-label":"Choose Excel file",onChange:onFile}),
@@ -551,7 +622,7 @@ function Admin({db,set}){
         h("div",{className:"acts"},
           h("button",{onClick:()=>setImp(null)},"Cancel"),
           h("button",{className:"pri",onClick:applyImport},"Import"))):null),
-    h("section",{className:"card"},
+    h("section",{className:"card","data-admin-section":"inventory"},
       h("h2",null,"Items ("+db.items.length+")"),
       !db.items.length?h("div",{className:"empty"},"No items yet. Add your first item above."):
       db.items.map(it=>h("div",{className:"erow",key:it.id},
@@ -561,7 +632,7 @@ function Admin({db,set}){
         h("div",{className:"full",style:{display:"flex",gap:8,alignItems:"center"}},
           h("span",{className:"muted",style:{marginRight:"auto"}},"Bill price "+money(eff(it.price))),
           h("button",{onClick:()=>del(it.id),style:arm===it.id?{borderColor:"var(--bad)",color:"var(--bad)"}:null},arm===it.id?"Sure?":"Delete"))))),
-    h("section",{className:"card"},
+    h("section",{className:"card","data-admin-section":"sales"},
       h("h2",null,"Sales"),
       h("div",{className:"row"},h("span",null,"Today ("+todays.length+" bills)"),h("b",null,money(todayTotal))),
       !db.bills.length?h("div",{className:"empty"},"Saved bills will show here."):
@@ -569,7 +640,7 @@ function Admin({db,set}){
         h("button",{"aria-expanded":open===b.n,onClick:()=>setOpen(open===b.n?null:b.n)},h("span",null,"#"+b.n+" · "+when(b.t)),h("b",null,money(b.total))),
         open===b.n?h("div",{className:"muted",style:{paddingTop:6}},
           b.lines.map((l,i)=>h("div",{className:"row",key:i},h("span",null,l.name+" × "+l.qty),h("span",null,money(l.price*l.qty)))),
-          b.disc>0?h("div",{className:"row"},h("span",null,"Discount"),h("span",null,"− "+money(b.disc))):null,h("button",{style:{marginTop:8,width:"100%"},onClick:()=>openPdf(b)},hasPdf(b.n)?"Open saved PDF":"Create and open PDF"),h("button",{style:{marginTop:8,width:"100%"},onClick:async()=>{const r=await sharePdf(b,db.shop);if(r!=="ok"&&r!=="cancel")setPdfMsg({n:b.n,t:"Sharing a file is not available in this browser."})}},"Send PDF on WhatsApp"),pdfMsg&&pdfMsg.n===b.n?h("div",{className:"toast",role:"status"},pdfMsg.t):null):null))));
+          b.disc>0?h("div",{className:"row"},h("span",null,"Discount"),h("span",null,"− "+money(b.disc))):null,h("button",{style:{marginTop:8,width:"100%"},onClick:()=>openPdf(b)},hasPdf(b.n)?"Open saved PDF":"Create and open PDF"),h("button",{style:{marginTop:8,width:"100%"},onClick:async()=>{const r=await sharePdf(b,db.shop);if(r!=="ok"&&r!=="cancel")setPdfMsg({n:b.n,t:"Sharing a file is not available in this browser."})}},"Send PDF on WhatsApp"),pdfMsg&&pdfMsg.n===b.n?h("div",{className:"toast",role:"status"},pdfMsg.t):null):null)))));
 }
 
 function Viewer(){
