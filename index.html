@@ -94,6 +94,18 @@ const when=t=>new Date(t).toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"
 const blank={items:[],mult:1,bills:[],cart:{},disc:{type:"pct",val:""},next:1,shop:""};
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&Array.isArray(d.items))return{...blank,...d}}catch(e){}return blank}
 function save(d){try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+function mergeStatic(list,items){
+  const idx=new Map(items.map(i=>[(i.name||"").trim().toLowerCase(),i]));
+  const add=[],upd=[];let skip=0;
+  list.forEach(x=>{
+    const name=String(x&&x.name!=null?x.name:"").trim(),price=Number(x&&x.price);
+    if(!name||isNaN(price)||price<0){skip++;return}
+    const ex=idx.get(name.toLowerCase());
+    if(ex)upd.push({id:ex.id,price,stock:ex.stock});
+    else add.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),name,price,stock:Math.max(0,Math.floor(Number(x.stock)||0))});
+  });
+  return{add,upd,skip};
+}
 
 const pad=n=>String(n).padStart(2,"0");
 const pdate=t=>{const d=new Date(t);return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear()+" "+pad(d.getHours())+":"+pad(d.getMinutes())};
@@ -142,6 +154,54 @@ async function sharePdf(b,shop){
     return "nosupport";
   }catch(e){return e&&e.name==="AbortError"?"cancel":"fail"}
 }
+function billCanvas(b,shop){
+  const S=2,W=420,P=20,F='system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif';
+  const draw=x=>{
+    x.setTransform(S,0,0,S,0,0);
+    x.fillStyle="#fff";x.fillRect(0,0,W,9999);x.fillStyle="#000";
+    let y=P+14;
+    const f=(sz,wt)=>{x.font=wt+" "+sz+"px "+F};
+    const cen=(t,sz,wt)=>{f(sz,wt);x.textAlign="center";x.fillText(t,W/2,y);y+=sz+8};
+    const row=(l,r,sz,wt)=>{f(sz,wt);x.textAlign="left";x.fillText(l,P,y);x.textAlign="right";x.fillText(r,W-P,y);y+=sz+8};
+    const rule=()=>{y-=4;x.fillRect(P,y,W-2*P,1);y+=14};
+    const wrap=(t,w)=>{f(16,"700");const o=[];let cur="";String(t).split(" ").forEach(wd=>{const n=cur?cur+" "+wd:wd;if(cur&&x.measureText(n).width>w){o.push(cur);cur=wd}else cur=n});o.push(cur);return o};
+    cen(shop||"Fireworks Bill",22,"700");
+    cen("Bill #"+b.n+"  "+pdate(b.t),14,"400");
+    rule();
+    b.lines.forEach(l=>{wrap(l.name||"Item",W-2*P).forEach(t=>{f(16,"700");x.textAlign="left";x.fillText(t,P,y);y+=22});row(l.qty+" × "+money(l.price),money(l.price*l.qty),15,"400")});
+    rule();
+    row("Subtotal",money(b.sub),16,"400");
+    if(b.disc>0)row("Discount","− "+money(b.disc),16,"400");
+    row("Total",money(b.total),24,"700");
+    y+=4;cen("Thank you!",14,"400");
+    return y+P-8;
+  };
+  const t=document.createElement("canvas");t.width=W*S;t.height=3000*S;
+  const H=draw(t.getContext("2d"));
+  const c=document.createElement("canvas");c.width=W*S;c.height=Math.ceil(H*S);
+  draw(c.getContext("2d"));
+  return c;
+}
+async function copyBillImage(b,shop){
+  try{
+    if(!navigator.clipboard||!window.ClipboardItem)return "nosupport";
+    const bp=new Promise(res=>billCanvas(b,shop).toBlob(res,"image/png"));
+    await navigator.clipboard.write([new ClipboardItem({"image/png":bp})]);
+    return "ok";
+  }catch(e){return "fail"}
+}
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);return true}
+  catch(e){try{const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();const ok=document.execCommand("copy");a.remove();return ok}catch(e2){return false}}
+}
+async function copyPdf(b,shop){
+  try{
+    if(!navigator.clipboard||!window.ClipboardItem)return "nosupport";
+    const blob=makePdf(b,shop).output("blob");
+    await navigator.clipboard.write([new ClipboardItem({"application/pdf":blob})]);
+    return "ok";
+  }catch(e){return "fail"}
+}
 function uriToBlob(uri){const s=atob(uri.split("base64,")[1]),a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return new Blob([a],{type:"application/pdf"})}
 function showPdf(blob,name){
   const url=URL.createObjectURL(blob);
@@ -184,6 +244,15 @@ function App(){
   const [tab,setTab]=useState("bill");
   const [done,setDone]=useState(null);
   useEffect(()=>{save(db)},[db]);
+  useEffect(()=>{
+    if(db.items.length)return;
+    fetch("db.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{
+      const list=d&&(Array.isArray(d)?d:d.items);
+      if(!Array.isArray(list))return;
+      const m=mergeStatic(list,[]);
+      if(m.add.length)setDb(o=>o.items.length?o:{...o,items:m.add});
+    }).catch(()=>{});
+  },[]);
   const set=p=>setDb(d=>({...d,...(typeof p==="function"?p(d):p)}));
   const tabBtn=(k,t)=>h("button",{className:"tab","aria-pressed":tab===k,onClick:()=>setTab(k)},t);
   return h("div",null,
@@ -198,11 +267,15 @@ function Bill({db,set,done,setDone}){
   const [pmsg,setPmsg]=useState("");
   const [ph,setPh]=useState("");
   const [wmsg,setWmsg]=useState("");
+  const [cmsg,setCmsg]=useState(null);
   const sendPdf=async()=>{
     const r=await sharePdf(done,db.shop);
     setWmsg(r==="ok"||r==="cancel"?"":"Sharing a file is not available in this browser. Use Send text bill, or save the PDF and attach it in WhatsApp.");
   };
   const savePdf=()=>setPmsg(storePdf(done,db.shop)?"PDF saved on this device.":"Could not save the PDF. Storage may be full.");
+  const copyImg=async()=>{const r=await copyBillImage(done,db.shop);setCmsg(r==="ok"?{ok:1,t:"Bill image copied. Open the chat and paste."}:{t:"This browser cannot copy images. Use Copy bill text."})};
+  const copyTxt=async()=>{const ok=await copyText(billText(done,db.shop));setCmsg(ok?{ok:1,t:"Bill text copied. Open the chat and paste."}:{t:"Could not copy. Use Send text bill on WhatsApp."})};
+  const copyPd=async()=>{const r=await copyPdf(done,db.shop);setCmsg(r==="ok"?{ok:1,t:"PDF copied. Try pasting in the chat. If nothing pastes, use Copy bill image."}:{t:"Your browser does not allow copying a PDF. Use Copy bill image instead."})};
   const cartRef=useRef(null);
   const eff=p=>r2(num(p)*num(db.mult));
   const byId=useMemo(()=>Object.fromEntries(db.items.map(i=>[i.id,i])),[db.items]);
@@ -228,7 +301,7 @@ function Bill({db,set,done,setDone}){
     set(d=>({items:d.items.map(i=>d.cart[i.id]>0?{...i,stock:Math.max(0,num(i.stock)-d.cart[i.id])}:i),bills:[bill,...d.bills].slice(0,500),next:d.next+1,cart:{},disc:{type:"pct",val:""}}));
     if(db.autoPdf)storePdf(bill,db.shop);
     if(db.bills.length>=500){try{localStorage.removeItem("fwb-pdf-"+db.bills[499].n)}catch(e){}}
-    setPmsg(db.autoPdf?"PDF saved on this device.":"");setPh("");setWmsg("");
+    setPmsg(db.autoPdf?"PDF saved on this device.":"");setPh("");setWmsg("");setCmsg(null);
     setDone(bill);
   };
   const shown=db.items.filter(i=>(i.name||"").toLowerCase().includes(q.trim().toLowerCase())).sort((a,b)=>(a.name||"").localeCompare(b.name||""));
@@ -263,7 +336,9 @@ function Bill({db,set,done,setDone}){
       h("div",{className:"acts",style:{gridTemplateColumns:"1fr",marginTop:8}},
         h("button",{className:"pri",onClick:sendPdf},"Send PDF on WhatsApp"),
         h("a",{className:"btn",href:waLink(done,db.shop,ph),target:"_blank",rel:"noopener noreferrer"},"Send text bill on WhatsApp")),
-      wmsg?h("div",{className:"toast",role:"alert"},wmsg):null),
+      wmsg?h("div",{className:"toast",role:"alert"},wmsg):null,
+      h("div",{className:"acts",style:{gridTemplateColumns:"1fr 1fr"}},h("button",{onClick:copyImg},"Copy bill image"),h("button",{onClick:copyTxt},"Copy bill text"),h("button",{style:{gridColumn:"1/-1"},onClick:copyPd},"Copy PDF (experimental)")),
+      cmsg?h("div",{className:cmsg.ok?"ok":"toast",role:"status"},cmsg.t):null),
     h("div",{className:"acts noprint",style:{gridTemplateColumns:"1fr 1fr"}},
       h("button",{onClick:()=>{try{window.print()}catch(e){}}},"Print"),h("button",{onClick:savePdf},"Save PDF"),
       h("button",{className:"pri",style:{gridColumn:"1/-1"},onClick:()=>setDone(null)},"New bill")));
@@ -349,6 +424,24 @@ function Admin({db,set}){
     setImpMsg("Imported "+imp.add.length+" new, updated "+imp.upd.length+".");
     setImp(null);
   };
+  const loadJson=async()=>{
+    setImpMsg("");setImp(null);
+    try{
+      const r=await fetch("db.json",{cache:"no-store"});
+      if(!r.ok)throw new Error(r.status===404?"db.json was not found next to the app.":"Could not read db.json ("+r.status+").");
+      const d=await r.json();
+      const list=Array.isArray(d)?d:d.items;
+      if(!Array.isArray(list))throw new Error("db.json needs an items list.");
+      const m=mergeStatic(list,db.items);
+      setImp(m.add.length||m.upd.length?m:{err:"No valid items in db.json. Each item needs a name and a price."});
+    }catch(e){setImp({err:e instanceof SyntaxError?"db.json is not valid JSON.":e instanceof TypeError?"Could not load db.json. Open the app from your hosted link.":e.message})}
+  };
+  const exportJson=()=>{
+    const out={items:db.items.map(i=>({name:i.name,price:num(i.price),stock:num(i.stock)}))};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:"application/json"}));
+    const a=document.createElement("a");a.href=url;a.download="db.json";document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+  };
   const onKey=e=>{if(e.key==="Enter")addItem()};
   const field=(label,input,full)=>h("div",{className:full?"full":""},h("label",{className:"lbl"},label),input);
   const today=new Date().toDateString();
@@ -370,9 +463,11 @@ function Admin({db,set}){
         field("Stock",h("input",{className:"inp",type:"number",inputMode:"numeric",min:0,value:ns,onChange:e=>setNs(e.target.value),onKeyDown:onKey})),
         h("button",{className:"pri full",disabled:!nn.trim(),onClick:addItem},"Add item"))),
     h("section",{className:"card"},
-      h("h2",null,"Import from Excel"),
+      h("h2",null,"Import items"),
       h("div",{className:"muted",style:{marginBottom:8}},"Use columns Name, Price and Stock (.xlsx, .xls or .csv). Items with the same name are updated; new names are added."),
       h("input",{className:"inp",style:{height:"auto",padding:"8px 12px"},type:"file",accept:".xlsx,.xls,.csv","aria-label":"Choose Excel file",onChange:onFile}),
+      h("div",{className:"acts",style:{gridTemplateColumns:"1fr 1fr"}},h("button",{onClick:loadJson},"Load items from db.json"),h("button",{onClick:exportJson},"Export items as db.json")),
+      h("div",{className:"muted",style:{marginTop:8}},"db.json sits in the same folder as index.html. Loading updates prices and adds new items. Stock of existing items is not changed."),
       impMsg?h("div",{className:"ok",style:{paddingTop:8},role:"status"},impMsg):null,
       imp&&imp.err?h("div",{className:"toast",role:"alert"},imp.err):null,
       imp&&!imp.err?h("div",{style:{paddingTop:10}},
